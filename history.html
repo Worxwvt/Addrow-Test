@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project_Test</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #FFFBE9;
+      padding: 30px;
+      color: #333;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid gray;
+      border-collapse: collapse;
+      padding: 6px;
+    }
+
+    input {
+      width: 95%;
+    }
+
+    button {
+      margin: 2px;
+    }
+
+    header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: flex;
+      display: flex;
+      justify-content: left;
+      align-items: center;
+      text-align: center;
+      background-color: #AD8B73;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      background-color: #AD8B73;
+      align-items: center;
+    }
+
+    h2 {
+      margin-top: 30px;
+    }
+
+    .menu-container {
+      position: relative;
+      background-color: #333;
+      color: white;
+      padding: 10px;
+    }
+
+    .menu-icon {
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .menu-links {
+      display: none;
+      background-color: #444;
+      position: absolute;
+      top: 40px;
+      left: 0;
+      width: 200px;
+      z-index: 999;
+      padding: 10px 0;
+    }
+
+    .menu-links a {
+      display: block;
+      padding: 8px 16px;
+      color: white;
+      text-decoration: none;
+    }
+
+    .menu-links a:hover {
+      background-color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="menu-container">
+      <div class="menu-icon" onclick="toggleMenu()">☰ เมนู</div>
+      <div class="menu-links" id="menuLinks">
+        <a href="index.html">🏠 หน้ากรอกข้อมูล</a>
+        <a href="history.html">📜 ประวัติพนักงาน</a>
+      </div>
+    </div>
+  </header>
+  <h2>ประวัติพนักงาน</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>รหัส</th>
+        <th>ชื่อ</th>
+        <th>ตำแหน่ง</th>
+        <th>หน้าที่ที่รับผิดชอบ</th>
+        <th>รายละเอียดงาน</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+
+  <script type="module">
+    import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {getFirestore, collection, getDocs, deleteDoc, doc, updateDoc} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB4L6C9c752cpbN8dzjDP303NMYr2Mlo80",
+      authDomain: "testaddrow-5681c.firebaseapp.com",
+      projectId: "testaddrow-5681c",
+      storageBucket: "testaddrow-5681c.firebasestorage.app",
+      messagingSenderId: "892145788614",
+      appId: "1:892145788614:web:223c8dd4725a33a1b959c7",
+      measurementId: "G-9BVM0Q4G2Z"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const empCol = collection(db, "employees");
+
+    async function loadHistory() {
+      const snapshot = await getDocs(empCol);
+      const tbody = document.getElementById("historyBody");
+      tbody.innerHTML = "";
+
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+              <td><input value="${data.empId}" class="empId"></td>
+              <td><input value="${data.name}" class="name"></td>
+              <td><input value="${data.position}" class="position"></td>
+              <td><input value="${data.head}" class="head"></td>
+              <td><input value="${data.detailed}" class="detailed"></td>
+              <td>
+                <button onclick="saveEdit('${docSnap.id}', this)">แก้ไข</button>
+                <button onclick="deleteFromFirebase('${docSnap.id}', this)">ลบ</button>
+              </td>
+            `;
+        tbody.appendChild(row);
+      });
+    }
+
+    window.saveEdit = async function (docId, btn) {
+      const row = btn.closest("tr");
+      const empId = row.querySelector(".empId").value.trim();
+      const name = row.querySelector(".name").value.trim();
+      const position = row.querySelector(".position").value.trim();
+      const head = row.querySelector(".head").value.trim();
+      const detailed = row.querySelector(".detailed").value.trim();
+
+      await updateDoc(doc(db, "employees", docId), {empId, name, position, head, detailed});
+      alert("✅ แก้ไขแล้ว");
+    }
+
+    window.deleteFromFirebase = async function (docId, btn) {
+      if (!confirm("ลบข้อมูลนี้?")) return;
+      await deleteDoc(doc(db, "employees", docId));
+      btn.closest("tr").remove();
+    }
+
+
+    loadHistory();
+
+  </script>
+
+  <footer>
+    <p>Copyright 2025 By Worawut Aiamsa-art</p>
+  </footer>
+</body>
+<script>
+  function toggleMenu() {
+    const menu = document.getElementById("menuLinks");
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+  }
+
+  // ปิดเมนูเมื่อคลิกรอบนอก
+  document.addEventListener("click", function (e) {
+    const menu = document.getElementById("menuLinks");
+    const icon = document.querySelector(".menu-icon");
+    if (!icon.contains(e.target) && !menu.contains(e.target)) {
+      menu.style.display = "none";
+    }
+  });
+</script>
+
+</html>
