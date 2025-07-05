@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TestAddrow</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #FFFBE9;
+      padding: 30px;
+      color: #333;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid gray;
+      border-collapse: collapse;
+      padding: 6px;
+    }
+
+    input {
+      width: 95%;
+    }
+
+    button {
+      margin: 2px;
+    }
+
+    header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background-color: #AD8B73;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      background-color: #AD8B73;
+      align-items: center;
+    }
+
+    h2 {
+      padding: 20px 0
+    }
+  </style>
+</head <body>
+
+<header>
+  <h1>ใช้ในการทดลอง ADDROW บันทึกลง Base</h1>
+</header>
+<h2>ฟอร์มเพิ่มข้อมูล_ADDROW</h2>
+
+<table id="employeeTable">
+  <thead>
+    <tr>
+      <th>รหัสพนักงาน</th>
+      <th>ชื่อ</th>
+      <th>ตำแหน่ง</th>
+      <th>หมายเหตุ</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<br>
+<button onclick="addRow()">➕ เพิ่มแถว</button>
+
+<script type="module">
+  // 🚀 Firebase SDK
+  import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {getFirestore, collection, addDoc, getDocs, deleteDoc, doc} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // 🔧Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyB4L6C9c752cpbN8dzjDP303NMYr2Mlo80",
+    authDomain: "testaddrow-5681c.firebaseapp.com",
+    projectId: "testaddrow-5681c",
+    storageBucket: "testaddrow-5681c.firebasestorage.app",
+    messagingSenderId: "892145788614",
+    appId: "1:892145788614:web:223c8dd4725a33a1b959c7",
+    measurementId: "G-9BVM0Q4G2Z"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const empCol = collection(db, "employees");
+
+  // 🔄 โหลดข้อมูลจาก Firebase
+  async function loadData() {
+    const snapshot = await getDocs(empCol);
+    document.getElementById("tableBody").innerHTML = "";
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      renderRow(data.empId, data.name, data.position, docSnap.id);
+    });
+  }
+
+  // ✅ สร้างแถวในตาราง
+  function renderRow(empId = "", name = "", position = "", docId = null) {
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td><input type="text" class="empIdInput" value="${empId}" ${docId ? "readonly" : ""}></td>
+        <td><input type="text" class="nameInput" value="${name}" ${docId ? "readonly" : ""}></td>
+        <td><input type="text" class="positionInput" value="${position}" ${docId ? "readonly" : ""}></td>
+        <td>
+          ${docId ?
+        `<button onclick="deleteFromFirebase('${docId}', this)">🗑️ ลบ</button>` :
+        `<button onclick="saveToFirebase(this)">💾 บันทึก</button>
+             <button onclick="deleteTempRow(this)">❌ ยกเลิก</button>`
+      }
+        </td>
+      `;
+
+    document.getElementById("tableBody").appendChild(row);
+  }
+
+  // ➕ เพิ่มแถวเปล่า (ยังไม่บันทึก)
+  window.addRow = function () {
+    renderRow();
+  }
+
+  // 💾 บันทึกลง Firebase
+  window.saveToFirebase = async function (btn) {
+    const row = btn.closest("tr");
+    const empId = row.querySelector(".empIdInput").value.trim();
+    const name = row.querySelector(".nameInput").value.trim();
+    const position = row.querySelector(".positionInput").value.trim();
+
+    if (!empId || !name || !position) {
+      alert("กรุณากรอกข้อมูลให้ครบทุกช่อง");
+      return;
+    }
+
+    try {
+      const docRef = await addDoc(empCol, {
+        empId,
+        name,
+        position,
+        createdAt: new Date()
+      });
+
+      alert("✅ บันทึกเรียบร้อย");
+
+      // โหลดข้อมูลใหม่ทั้งหมด (เพื่อให้แถว readonly)
+      loadData();
+    } catch (err) {
+      console.error("❌ บันทึกล้มเหลว:", err);
+      alert("เกิดข้อผิดพลาดในการบันทึก");
+    }
+  }
+
+  // 🗑️ ลบจาก Firebase
+  window.deleteFromFirebase = async function (docId, btn) {
+    if (!confirm("ยืนยันการลบข้อมูลนี้?")) return;
+
+    try {
+      await deleteDoc(doc(db, "employees", docId));
+      btn.closest("tr").remove();
+      alert("✅ ลบสำเร็จ");
+    } catch (err) {
+      console.error("❌ ลบล้มเหลว:", err);
+      alert("เกิดข้อผิดพลาดในการลบ");
+    }
+  }
+
+  // ❌ ลบแถวที่ยังไม่บันทึก
+  window.deleteTempRow = function (btn) {
+    btn.closest("tr").remove();
+  }
+
+  // โหลดข้อมูลเมื่อเริ่มต้น
+  loadData();
+</script>
+
+<footer>
+  <p>Coppyright 2025 By Worawut Aiam-art</p>
+</footer>
+</body>
+
+</html>
